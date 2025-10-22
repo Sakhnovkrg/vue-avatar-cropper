@@ -40,7 +40,11 @@ const downloadImage = () => {
   <div class="app">
     <h1 class="title">Vue Avatar Cropper</h1>
     <p class="subtitle">
-      <a href="https://github.com/sakhnovkrg/vue-avatar-cropper" target="_blank" rel="noopener noreferrer">
+      <a
+        href="https://github.com/sakhnovkrg/vue-avatar-cropper"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         View on GitHub
       </a>
     </p>
@@ -98,7 +102,9 @@ const downloadImage = () => {
 </template>
 
 <style>
-*, *::after, *::before {
+*,
+*::after,
+*::before {
   box-sizing: border-box;
 }
 

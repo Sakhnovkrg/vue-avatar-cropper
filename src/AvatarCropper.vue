@@ -45,19 +45,21 @@ const cropSize = computed(() => {
   return Math.min(width, height)
 })
 
-const imageStyle = computed(() => {
-  if (!image.value) return {}
+const imageStyle = computed<{ transform?: string; transformOrigin?: string }>(
+  () => {
+    if (!image.value) return {}
 
-  const scaledWidth = image.value.naturalWidth * scale.value
-  const scaledHeight = image.value.naturalHeight * scale.value
-  const translateX = (position.value.x / 100) * scaledWidth
-  const translateY = (position.value.y / 100) * scaledHeight
+    const scaledWidth = image.value.naturalWidth * scale.value
+    const scaledHeight = image.value.naturalHeight * scale.value
+    const translateX = (position.value.x / 100) * scaledWidth
+    const translateY = (position.value.y / 100) * scaledHeight
 
-  return {
-    transform: `translate(${translateX}px, ${translateY}px) scale(${scale.value})`,
-    transformOrigin: '0 0',
+    return {
+      transform: `translate(${translateX}px, ${translateY}px) scale(${scale.value})`,
+      transformOrigin: '0 0',
+    }
   }
-})
+)
 
 const loadImage = (file: File) => {
   if (file && file.type.startsWith('image/')) {
@@ -265,12 +267,16 @@ const resetZoom = () => {
 }
 
 const cropImage = (): string => {
-  if (!image.value || !canvas.value || !container.value) return ''
+  if (!image.value || !canvas.value || !container.value) {
+    return ''
+  }
 
   const canvasEl = canvas.value
   const img = image.value
   const ctx = canvasEl.getContext('2d')
-  if (!ctx) return ''
+  if (!ctx) {
+    return ''
+  }
 
   canvasEl.width = props.outputSize
   canvasEl.height = props.outputSize
