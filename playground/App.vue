@@ -8,6 +8,8 @@ const cropperRef = ref<InstanceType<typeof AvatarCropper>>()
 const showCircle = ref(false)
 const showGrid = ref(true)
 const fileInput = ref<HTMLInputElement>()
+const showModal = ref(false)
+const croppedImage = ref('')
 
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -18,18 +20,30 @@ const handleFileSelect = (event: Event) => {
 }
 
 const handleCropped = (base64: string) => {
-  fetch(base64)
-    .then(res => res.blob())
-    .then(blob => {
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-    })
+  croppedImage.value = base64
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+}
+
+const downloadImage = () => {
+  const link = document.createElement('a')
+  link.href = croppedImage.value
+  link.download = 'cropped-avatar.png'
+  link.click()
 }
 </script>
 
 <template>
   <div class="app">
     <h1 class="title">Vue Avatar Cropper</h1>
+    <p class="subtitle">
+      <a href="https://github.com/sakhnovkrg/vue-avatar-cropper" target="_blank" rel="noopener noreferrer">
+        View on GitHub
+      </a>
+    </p>
 
     <div class="controls">
       <input
@@ -66,6 +80,20 @@ const handleCropped = (base64: string) => {
         @cropped="handleCropped"
       />
     </div>
+
+    <div v-if="showModal" class="modal-overlay" @click="closeModal">
+      <div class="modal-content" @click.stop>
+        <button class="modal-close" @click="closeModal">&times;</button>
+        <h2 class="modal-title">Cropped Image</h2>
+        <img :src="croppedImage" alt="Cropped" class="modal-image" />
+        <div class="modal-actions">
+          <button class="button button--success" @click="downloadImage">
+            Download
+          </button>
+          <button class="button" @click="closeModal">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -95,8 +123,25 @@ body {
 
 .title {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   color: #42b883;
+}
+
+.subtitle {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.subtitle a {
+  color: #646cff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s;
+}
+
+.subtitle a:hover {
+  color: #535bf2;
 }
 
 .controls {
@@ -193,6 +238,93 @@ body {
     font-size: 12px;
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 600px;
+  width: 100%;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 32px;
+  cursor: pointer;
+  color: #666;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-title {
+  margin: 0 0 20px 0;
+  color: #333;
+  text-align: center;
+}
+
+.modal-image {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .modal-content {
+    padding: 20px;
+  }
+
+  .modal-title {
+    font-size: 20px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions .button {
+    width: 100%;
   }
 }
 </style>
