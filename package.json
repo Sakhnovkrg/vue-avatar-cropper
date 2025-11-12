@@ -1,6 +1,6 @@
 {
   "name": "@sakhnovkrg/vue-avatar-cropper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Avatar Cropper component for Vue 3",
   "type": "module",
   "main": "./dist/index.cjs",
