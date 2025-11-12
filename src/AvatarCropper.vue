@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-const MIN_SCALE = 0.1
 const MAX_SCALE = 10
 const ZOOM_STEP = 1.2
 const ZOOM_SPEED = 0.1
@@ -45,6 +44,19 @@ const cropSize = computed(() => {
   return Math.min(width, height)
 })
 
+const minScaleValue = computed<number>(() => {
+  if (!image.value) return 0.1
+  const currentCropSize = cropSize.value
+  const img = image.value
+
+  if (currentCropSize <= 0 || img.naturalWidth <= 0 || img.naturalHeight <= 0) return 0.1
+
+  const scaleX = currentCropSize / img.naturalWidth
+  const scaleY = currentCropSize / img.naturalHeight
+  
+  return Math.max(scaleX, scaleY)
+})
+
 const imageStyle = computed<{ transform?: string; transformOrigin?: string }>(
   () => {
     if (!image.value) return {}
@@ -60,6 +72,29 @@ const imageStyle = computed<{ transform?: string; transformOrigin?: string }>(
     }
   }
 )
+
+const clampPosition = (
+  currentX: number,
+  currentY: number
+): { x: number; y: number } => {
+  if (!image.value) return { x: currentX, y: currentY }
+
+  const img = image.value
+  const currentCropSize = cropSize.value
+  const scaledWidth = img.naturalWidth * scale.value
+  const scaledHeight = img.naturalHeight * scale.value
+
+  const maxX = ((currentCropSize - scaledWidth) / scaledWidth) * 100
+  const maxY = ((currentCropSize - scaledHeight) / scaledHeight) * 100
+
+  const minX = 0
+  const minY = 0
+  
+  const newX = Math.max(maxX, Math.min(minX, currentX))
+  const newY = Math.max(maxY, Math.min(minY, currentY))
+
+  return { x: newX, y: newY }
+}
 
 const loadImage = (file: File) => {
   if (file && file.type.startsWith('image/')) {
@@ -82,7 +117,8 @@ const onImageLoad = () => {
 
   const scaleX = currentCropSize / img.naturalWidth
   const scaleY = currentCropSize / img.naturalHeight
-  scale.value = Math.max(scaleX, scaleY)
+  
+  scale.value = Math.max(scaleX, scaleY) 
   lastScale.value = scale.value
 
   const scaledWidth = img.naturalWidth * scale.value
@@ -105,30 +141,34 @@ const getDistance = (touch1: Touch, touch2: Touch): number => {
 const applyZoomFromCenter = (newScale: number) => {
   if (!image.value) return
 
+  const validatedNewScale = Math.max(minScaleValue.value, Math.min(MAX_SCALE, newScale))
+  if (scale.value === validatedNewScale) return
+
   const img = image.value
   const currentCropSize = cropSize.value
   const oldScaledWidth = img.naturalWidth * scale.value
   const oldScaledHeight = img.naturalHeight * scale.value
-  const newScaledWidth = img.naturalWidth * newScale
-  const newScaledHeight = img.naturalHeight * newScale
+  const newScaledWidth = img.naturalWidth * validatedNewScale
+  const newScaledHeight = img.naturalHeight * validatedNewScale
 
   const centerOffsetX =
     currentCropSize / 2 - (position.value.x / 100) * oldScaledWidth
   const centerOffsetY =
     currentCropSize / 2 - (position.value.y / 100) * oldScaledHeight
 
-  position.value = {
-    x:
-      ((currentCropSize / 2 - (centerOffsetX * newScale) / scale.value) /
-        newScaledWidth) *
-      100,
-    y:
-      ((currentCropSize / 2 - (centerOffsetY * newScale) / scale.value) /
-        newScaledHeight) *
-      100,
-  }
-
-  scale.value = newScale
+  let newX =
+    ((currentCropSize / 2 - (centerOffsetX * validatedNewScale) / scale.value) /
+      newScaledWidth) *
+    100
+  let newY =
+    ((currentCropSize / 2 - (centerOffsetY * validatedNewScale) / scale.value) /
+      newScaledHeight) *
+    100
+      
+  scale.value = validatedNewScale
+  
+  const clampedPos = clampPosition(newX, newY)
+  position.value = clampedPos
 }
 
 const onMouseDown = (event: MouseEvent) => {
@@ -151,10 +191,12 @@ const handleDrag = (clientX: number, clientY: number) => {
   const deltaX = clientX - dragStart.value.x
   const deltaY = clientY - dragStart.value.y
 
-  position.value = {
-    x: position.value.x + (deltaX / scaledWidth) * 100,
-    y: position.value.y + (deltaY / scaledHeight) * 100,
-  }
+  let newX = position.value.x + (deltaX / scaledWidth) * 100
+  let newY = position.value.y + (deltaY / scaledHeight) * 100
+  
+  const clampedPos = clampPosition(newX, newY)
+
+  position.value = clampedPos
 
   dragStart.value = { x: clientX, y: clientY }
 }
@@ -208,8 +250,9 @@ const onTouchMove = (event: TouchEvent) => {
 
     const currentDistance = getDistance(touch0, touch1)
     const scaleChange = currentDistance / initialDistance.value
+    
     const newScale = Math.max(
-      MIN_SCALE,
+      minScaleValue.value,
       Math.min(MAX_SCALE, lastScale.value * scaleChange)
     )
 
@@ -228,8 +271,9 @@ const onWheel = (event: WheelEvent) => {
   event.preventDefault()
 
   const delta = -Math.sign(event.deltaY) * ZOOM_SPEED
+  
   const newScale = Math.max(
-    MIN_SCALE,
+    minScaleValue.value,
     Math.min(MAX_SCALE, scale.value * (1 + delta))
   )
 
@@ -244,7 +288,7 @@ const zoomIn = () => {
 
 const zoomOut = () => {
   if (!image.value) return
-  const newScale = Math.max(MIN_SCALE, scale.value / ZOOM_STEP)
+  const newScale = Math.max(minScaleValue.value, scale.value / ZOOM_STEP)
   applyZoomFromCenter(newScale)
 }
 
@@ -253,17 +297,16 @@ const resetZoom = () => {
 
   const img = image.value
   const currentCropSize = cropSize.value
-  const scaleX = currentCropSize / img.naturalWidth
-  const scaleY = currentCropSize / img.naturalHeight
-  scale.value = Math.max(scaleX, scaleY)
+  
+  scale.value = minScaleValue.value 
 
   const scaledWidth = img.naturalWidth * scale.value
   const scaledHeight = img.naturalHeight * scale.value
 
-  position.value = {
-    x: (((currentCropSize - scaledWidth) / scaledWidth) * 100) / 2,
-    y: (((currentCropSize - scaledHeight) / scaledHeight) * 100) / 2,
-  }
+  let newX = (((currentCropSize - scaledWidth) / scaledWidth) * 100) / 2
+  let newY = (((currentCropSize - scaledHeight) / scaledHeight) * 100) / 2
+  
+  position.value = clampPosition(newX, newY)
 }
 
 const cropImage = (): string => {
@@ -291,7 +334,7 @@ const cropImage = (): string => {
   const sourceY = -imgTop / scale.value
   const sourceSize = cropSize.value / scale.value
 
-  ctx.fillStyle = 'white'
+  ctx.fillStyle = props.backgroundColor
   ctx.fillRect(0, 0, props.outputSize, props.outputSize)
 
   ctx.drawImage(
