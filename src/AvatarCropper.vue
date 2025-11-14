@@ -49,11 +49,12 @@ const minScaleValue = computed<number>(() => {
   const currentCropSize = cropSize.value
   const img = image.value
 
-  if (currentCropSize <= 0 || img.naturalWidth <= 0 || img.naturalHeight <= 0) return 0.1
+  if (currentCropSize <= 0 || img.naturalWidth <= 0 || img.naturalHeight <= 0)
+    return 0.1
 
   const scaleX = currentCropSize / img.naturalWidth
   const scaleY = currentCropSize / img.naturalHeight
-  
+
   return Math.max(scaleX, scaleY)
 })
 
@@ -89,7 +90,7 @@ const clampPosition = (
 
   const minX = 0
   const minY = 0
-  
+
   const newX = Math.max(maxX, Math.min(minX, currentX))
   const newY = Math.max(maxY, Math.min(minY, currentY))
 
@@ -117,8 +118,8 @@ const onImageLoad = () => {
 
   const scaleX = currentCropSize / img.naturalWidth
   const scaleY = currentCropSize / img.naturalHeight
-  
-  scale.value = Math.max(scaleX, scaleY) 
+
+  scale.value = Math.max(scaleX, scaleY)
   lastScale.value = scale.value
 
   const scaledWidth = img.naturalWidth * scale.value
@@ -141,7 +142,10 @@ const getDistance = (touch1: Touch, touch2: Touch): number => {
 const applyZoomFromCenter = (newScale: number) => {
   if (!image.value) return
 
-  const validatedNewScale = Math.max(minScaleValue.value, Math.min(MAX_SCALE, newScale))
+  const validatedNewScale = Math.max(
+    minScaleValue.value,
+    Math.min(MAX_SCALE, newScale)
+  )
   if (scale.value === validatedNewScale) return
 
   const img = image.value
@@ -164,9 +168,9 @@ const applyZoomFromCenter = (newScale: number) => {
     ((currentCropSize / 2 - (centerOffsetY * validatedNewScale) / scale.value) /
       newScaledHeight) *
     100
-      
+
   scale.value = validatedNewScale
-  
+
   const clampedPos = clampPosition(newX, newY)
   position.value = clampedPos
 }
@@ -193,7 +197,7 @@ const handleDrag = (clientX: number, clientY: number) => {
 
   let newX = position.value.x + (deltaX / scaledWidth) * 100
   let newY = position.value.y + (deltaY / scaledHeight) * 100
-  
+
   const clampedPos = clampPosition(newX, newY)
 
   position.value = clampedPos
@@ -250,7 +254,7 @@ const onTouchMove = (event: TouchEvent) => {
 
     const currentDistance = getDistance(touch0, touch1)
     const scaleChange = currentDistance / initialDistance.value
-    
+
     const newScale = Math.max(
       minScaleValue.value,
       Math.min(MAX_SCALE, lastScale.value * scaleChange)
@@ -271,7 +275,7 @@ const onWheel = (event: WheelEvent) => {
   event.preventDefault()
 
   const delta = -Math.sign(event.deltaY) * ZOOM_SPEED
-  
+
   const newScale = Math.max(
     minScaleValue.value,
     Math.min(MAX_SCALE, scale.value * (1 + delta))
@@ -297,15 +301,15 @@ const resetZoom = () => {
 
   const img = image.value
   const currentCropSize = cropSize.value
-  
-  scale.value = minScaleValue.value 
+
+  scale.value = minScaleValue.value
 
   const scaledWidth = img.naturalWidth * scale.value
   const scaledHeight = img.naturalHeight * scale.value
 
   let newX = (((currentCropSize - scaledWidth) / scaledWidth) * 100) / 2
   let newY = (((currentCropSize - scaledHeight) / scaledHeight) * 100) / 2
-  
+
   position.value = clampPosition(newX, newY)
 }
 
